@@ -1,0 +1,20 @@
+{
+  "format": "1920x1080",
+  "finalTransform": {
+    "s": 0.6728009811680975,
+    "tx": 285.57420446238154,
+    "ty": 359.7633451548784
+  },
+  "pixels": 2073600,
+  "meanAbsDiff": 0.0902,
+  "maxDiff": 86,
+  "pixelsOver8": 7515,
+  "pixelsOver32": 958,
+  "pixelsOver64": 16,
+  "background": [
+    47,
+    43,
+    40
+  ],
+  "note": "Differenze = scarto 0-255 sul canale peggiore tra frame vettoriale finale e PNG originale B ricampionato alla stessa scala."
+}

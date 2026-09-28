@@ -85,16 +85,17 @@ async function renderVideo(browser, format, o, ffmpeg) {
   ff.on("error", e => { console.error("Impossibile avviare ffmpeg:", e.message); process.exit(1); });
 
   const t0 = Date.now();
-  // frame 0 … total: l'ultimo frame (t = 15,0 s) è esattamente il logo finale
-  for (let i = 0; i <= total; i++) {
-    const t = Math.min(duration, i / o.fps);
+  // total frame esatti (15,0 s). L'ultimo viene campionato a t = 15,0 s così
+  // coincide esattamente con il logo finale (l'animazione è ferma da 14,7 s).
+  for (let i = 0; i < total; i++) {
+    const t = i === total - 1 ? duration : i / o.fps;
     await page.evaluate(tt => window.__setTime(tt), t);
     const buf = await page.screenshot({ type: "png", animations: "disabled" });
     if (o.framesDir) await writeFile(path.join(o.framesDir, format, `f${String(i).padStart(5, "0")}.png`), buf);
     if (!ff.stdin.write(buf)) await new Promise(r => ff.stdin.once("drain", r));
-    if (i % o.fps === 0 || i === total) {
+    if (i % o.fps === 0 || i === total - 1) {
       const el = (Date.now() - t0) / 1000;
-      process.stdout.write(`\r[${format}] frame ${i}/${total}  ${(i / Math.max(el, 0.001)).toFixed(1)} fps  `);
+      process.stdout.write(`\r[${format}] frame ${i + 1}/${total}  ${((i + 1) / Math.max(el, 0.001)).toFixed(1)} fps  `);
     }
   }
   ff.stdin.end();

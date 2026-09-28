@@ -15,6 +15,12 @@ Animazione di presentazione del nuovo logo 3D Target: minimale, cinematografica,
 | `assets/logo/` | SVG vettoriali fedeli delle 4 varianti (viewBox 2000×536) e `logo-data.json`. |
 | `output/` | MP4 renderizzati, frame finali PNG e cartella `verify/` con il report di corrispondenza. |
 
+File già renderizzati in `output/`:
+
+- `3dtarget-logo-reveal-1920x1080-60fps.mp4`: H.264 High, CRF 14, yuv420p BT.709, 900 frame = 15,00 s, ~33 Mbit/s
+- `3dtarget-logo-reveal-1080x1920-60fps.mp4`: stesse specifiche, verticale per i social
+- `3dtarget-logo-final-frame-1920x1080.png` / `-1080x1920.png`: frame finale statico
+
 ## Render — istruzioni in 5 righe
 
 ```bash
