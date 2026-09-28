@@ -1,0 +1,61 @@
+{
+  "sample_rate": 48000,
+  "bit_depth": 24,
+  "samples": 720000,
+  "duration_s": 15.0,
+  "integrated_lufs": -16.0,
+  "true_peak_dbtp": -1.29,
+  "true_peak_before_limiter_dbtp": 1.34,
+  "max_gain_reduction_db": 2.64,
+  "stems_trim_db": -1.18,
+  "stem_peaks_dbfs": {
+    "music": -3.19,
+    "sfx": -1.0
+  },
+  "last_100ms_peak_dbfs": -49.9,
+  "cues": {
+    "dot_birth": 0.25,
+    "dot_pulse": 1.44,
+    "lines_h": 2.0,
+    "lines_v": 2.12,
+    "flare": [
+      2.0,
+      2.7,
+      3.5,
+      4.4
+    ],
+    "brackets": [
+      4.0,
+      4.11,
+      4.22,
+      4.33
+    ],
+    "brackets_lock": 5.25,
+    "three": [
+      7.0,
+      7.12,
+      7.24
+    ],
+    "divider": 9.5,
+    "letters": [
+      10.05,
+      10.14,
+      10.23,
+      10.32,
+      10.41,
+      10.5,
+      10.59,
+      10.680000000000001
+    ],
+    "color": 10.75,
+    "hit": 12.0,
+    "light_full": 12.4,
+    "light_back": 12.8,
+    "sweep": [
+      12.72,
+      13.62
+    ],
+    "hold": 13.5,
+    "fx_zero": 14.7
+  }
+}

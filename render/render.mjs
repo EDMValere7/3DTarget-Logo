@@ -15,6 +15,7 @@
  *   --out DIR           cartella di output (default ./output)
  *   --frames-dir DIR    salva anche i PNG dei singoli frame
  *   --still             renderizza solo il frame finale (t = 15 s) in PNG
+ *   --no-audio          MP4 muto (di default include audio/3dtarget-logo-audio-mix.wav, se presente)
  *
  * ffmpeg: usa $FFMPEG se definito, poi il pacchetto ffmpeg-static, poi "ffmpeg" nel PATH.
  * Il tempo viene impostato via window.__setTime(t): l'animazione è una funzione
@@ -29,10 +30,11 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const HTML = path.join(ROOT, "animation", "3dtarget-logo-animation.html");
+const AUDIO = path.join(ROOT, "audio", "3dtarget-logo-audio-mix.wav");
 
 function args() {
   const a = process.argv.slice(2), o = { format: "both", fps: 60, crf: 14, preset: "slow",
-    tagline: false, out: path.join(ROOT, "output"), framesDir: null, still: false };
+    tagline: false, out: path.join(ROOT, "output"), framesDir: null, still: false, audio: true };
   for (let i = 0; i < a.length; i++) {
     const k = a[i];
     if (k === "--format") o.format = a[++i];
@@ -43,6 +45,7 @@ function args() {
     else if (k === "--out") o.out = path.resolve(a[++i]);
     else if (k === "--frames-dir") o.framesDir = path.resolve(a[++i]);
     else if (k === "--still") o.still = true;
+    else if (k === "--no-audio") o.audio = false;
     else { console.error("Opzione sconosciuta:", k); process.exit(1); }
   }
   return o;
@@ -72,14 +75,20 @@ async function renderVideo(browser, format, o, ffmpeg) {
   const outFile = path.join(o.out, name);
   if (o.framesDir) await mkdir(path.join(o.framesDir, format), { recursive: true });
 
+  const withAudio = o.audio && existsSync(AUDIO);
+  const audioArgs = withAudio
+    ? ["-map", "0:v:0", "-map", "1:a:0", "-c:a", "aac", "-b:a", "320k", "-ar", "48000"]
+    : ["-an"];
   const ff = spawn(ffmpeg, [
     "-y", "-hide_banner", "-loglevel", "error",
     "-f", "image2pipe", "-framerate", String(o.fps), "-c:v", "png", "-i", "-",
+    ...(withAudio ? ["-i", AUDIO] : []),
     "-vf", "scale=in_range=full:out_range=tv:out_color_matrix=bt709,format=yuv420p",
     "-c:v", "libx264", "-preset", o.preset, "-crf", String(o.crf),
     "-profile:v", "high", "-level", "5.1",
     "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709", "-color_range", "tv",
-    "-movflags", "+faststart", "-an", outFile,
+    ...audioArgs,
+    "-movflags", "+faststart", outFile,
   ], { stdio: ["pipe", "inherit", "inherit"] });
   const done = new Promise((res, rej) => ff.on("close", c => c === 0 ? res() : rej(new Error("ffmpeg exit " + c))));
   ff.on("error", e => { console.error("Impossibile avviare ffmpeg:", e.message); process.exit(1); });
@@ -101,7 +110,7 @@ async function renderVideo(browser, format, o, ffmpeg) {
   ff.stdin.end();
   await done;
   await page.close();
-  console.log(`\n→ ${path.relative(process.cwd(), outFile)}`);
+  console.log(`\n→ ${path.relative(process.cwd(), outFile)}${withAudio ? " (con audio)" : " (muto)"}`);
 }
 
 async function renderStill(browser, format, o) {

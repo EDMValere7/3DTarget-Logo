@@ -1,7 +1,7 @@
 # 3D Target — Logo reveal (15 s)
 
 Animazione di presentazione del nuovo logo 3D Target: minimale, cinematografica, in stile keynote.
-1920×1080 e 1080×1920, 60 fps, 15,0 s, senza audio.
+1920×1080 e 1080×1920, 60 fps, 15,0 s, con colonna sonora originale sincronizzata.
 
 ## Struttura
 
@@ -10,6 +10,9 @@ Animazione di presentazione del nuovo logo 3D Target: minimale, cinematografica,
 | `animation/3dtarget-logo-animation.html` | **File HTML autonomo**: SVG + Canvas, timeline scrubbabile, Play/Pausa, Replay, 16:9 / 9:16, tagline opzionale. Nessuna dipendenza esterna. |
 | `render/render.mjs` | Render frame-by-frame (Playwright + ffmpeg) → MP4 H.264, CRF 14, BT.709. |
 | `render/verify.mjs` | Confronto pixel per pixel del frame finale con il PNG originale (variante B). |
+| `render/mux-audio.mjs` | Inserisce/sostituisce la colonna sonora negli MP4 esistenti senza ricodificare il video. |
+| `audio/sound_design.py` | Sintesi della colonna sonora (musica + sound design) sui timestamp della timeline. |
+| `audio/` | Master WAV 48 kHz/24 bit, stem `music`/`sfx`, AAC/Opus, report di loudness e grafico di sync. |
 | `tools/trace_logo.py` | Vettorializzazione dei PNG ufficiali (potrace) → SVG + dati per l'animazione. |
 | `assets/source/` | PNG originali: A (colori, fondo chiaro), B (colori, fondo scuro), C (bianco), D (grigio scuro). |
 | `assets/logo/` | SVG vettoriali fedeli delle 4 varianti (viewBox 2000×536) e `logo-data.json`. |
@@ -17,7 +20,7 @@ Animazione di presentazione del nuovo logo 3D Target: minimale, cinematografica,
 
 File già renderizzati in `output/`:
 
-- `3dtarget-logo-reveal-1920x1080-60fps.mp4`: H.264 High, CRF 14, yuv420p BT.709, 900 frame = 15,00 s, ~33 Mbit/s
+- `3dtarget-logo-reveal-1920x1080-60fps.mp4`: H.264 High, CRF 14, yuv420p BT.709, 900 frame = 15,00 s, ~33 Mbit/s, audio AAC-LC 320 kbps 48 kHz stereo
 - `3dtarget-logo-reveal-1080x1920-60fps.mp4`: stesse specifiche, verticale per i social
 - `3dtarget-logo-final-frame-1920x1080.png` / `-1080x1920.png`: frame finale statico
 
@@ -31,7 +34,19 @@ node render/render.mjs --format h --fps 30 --crf 12   # varianti: formato, fps, 
 npm run verify                       # confronta il frame finale con il PNG originale B → output/verify/
 ```
 
-Anteprima: apri `animation/3dtarget-logo-animation.html` in un browser (spazio = play/pausa, ←/→ = frame per frame).
+Audio (già incluso negli MP4; serve solo per rigenerarlo o cambiarlo):
+
+```bash
+pip install numpy scipy matplotlib   # dipendenze della sintesi
+npm run audio                        # rigenera audio/*.wav e l'audio incorporato nell'HTML
+npm run mux                          # sostituisce l'audio negli MP4 in ./output (video non ricodificato)
+```
+
+`npm run render` include automaticamente `audio/3dtarget-logo-audio-mix.wav` se esiste; `--no-audio` per un MP4 muto.
+
+Anteprima: apri `animation/3dtarget-logo-animation.html` in un browser (spazio = play/pausa, ←/→ = frame per frame,
+M = audio on/off). L'audio è incorporato (AAC per Safari/Chrome/Edge, Opus per Chromium/Firefox) e fa da clock
+master della timeline durante la riproduzione; se il browser blocca l'autoplay parte al primo clic.
 
 ## Fedeltà del logo
 
@@ -65,26 +80,49 @@ Anteprima: apri `animation/3dtarget-logo-animation.html` in un browser (spazio =
 Easing: `cubic-bezier(0.16, 1, 0.3, 1)` per tutti gli ingressi, sinusoidale morbida per dissolvenze;
 camera su spline cubica monotona (velocità continua, nessun overshoot).
 
-## Punti di sincronizzazione per musica e sound design
+## Colonna sonora
 
-| Timestamp | Evento | Suggerimento audio |
+Musica e sound design originali, **sintetizzati interamente in codice** (`audio/sound_design.py`): nessun
+campione o brano di terzi, quindi nessun problema di licenza. Il risultato è deterministico (seed fissi).
+
+- **Musica:** 120 BPM, così i momenti chiave (2,0 · 4,0 · 7,0 · 9,5 · 12,0 · 13,5 s) cadono sul beat. Tonalità
+  di Re: pedale di Re → Si♭maj7 (staffe) → Solm9 (il "3") → La7sus4 in crescendo (divisore e testo) →
+  **risoluzione in Re maggiore add9 sul match-cut a 12,0 s**. Pad additivi, ostinato "pluck" con delay ping-pong,
+  accordo di piano FM sull'hit con reverse swell, riverbero sintetico.
+- **Sound design agganciato alle immagini:** i whoosh del mirino aprono il filtro con la stessa curva di easing
+  delle linee e si allargano in stereo come loro; 4 tick ascendenti panoramicati sulle 4 staffe; 3 impatti
+  intonati per le 3 fasce del "3"; l'arpeggio delle lettere va da sinistra a destra come il reveal; il glint
+  del light sweep attraversa lo stereo con la banda di luce; 70 ms di vuoto prima dell'hit.
+- **Master:** 48 kHz / 24 bit, **-16 LUFS integrati, true peak -1,3 dBTP** (ITU-R BS.1770-4). Il limiter
+  interviene solo sui due transienti principali (max 2,6 dB, 0,4 s in tutto). Silenzio esatto a 15,0 s.
+  Per le piattaforme social che normalizzano a -14 LUFS basta un +2 dB in montaggio.
+- **Stem per il montaggio:** `audio/stems/music.wav` e `sfx.wav` (stesso guadagno del master pre-limiter,
+  abbassati entrambi di 1,2 dB per non clippare), per rimixare o sostituire la musica tenendo gli effetti.
+- **Verifiche:** `audio/audio-sync-check.png` (forma d'onda e spettrogramma con i marker degli eventi),
+  `audio/audio-report.json` (loudness, picchi, cue). Negli MP4 l'audio è allineato al campione (scarto 0,
+  misurato per correlazione a 4,0 / 7,0 / 12,0 s).
+
+## Punti di sincronizzazione (usati dalla colonna sonora)
+
+| Timestamp | Evento | Audio |
 |---|---|---|
-| 00:00.00 | Inizio, buio | Room tone / pad scuro in fade-in |
-| 00:00.25 | Nascita del punto | Sub "bloom" morbido |
-| 00:00.60–02.30 | Pulsazione del punto (~1 Hz) | Battito sub molto basso |
-| 00:02.00 | Draw-on orizzontale + inizio flare | Whoosh/riser sottile, tono "laser" filtrato |
-| 00:02.12 | Draw-on verticale | Secondo strato del riser |
-| 00:03.00 | Picco del lens flare | Shimmer alto |
-| 00:04.00 / 04.11 / 04.22 / 04.33 | Ingresso delle 4 staffe | 4 click meccanici di precisione (tick) |
-| 00:05.90 | Staffe assestate | Coda / lock morbido |
-| 00:07.00 / 07.12 / 07.24 | Costruzione del "3" (3 fasce) | 3 impatti leggeri in crescendo |
-| 00:09.50 | Camera ferma su "3D", divisore inizia a crescere | Swell / inizio build-up |
-| 00:10.05–10.68 | Reveal "3D Target" lettera per lettera | Texture granulare / arpeggio veloce |
-| 00:10.75–11.60 | Bianco → arancione, bagliore | Climax armonico |
-| 00:12.00 | **Match-cut chiaro** | **Downbeat principale / hit** |
-| 00:12.40 | Schermo chiaro pieno | Sospensione (air) |
-| 00:12.80 | Ritorno al fondo scuro | Reverse cymbal / respiro |
-| 00:12.72–13.62 | Light sweep | Shimmer / glint |
-| 00:13.50 | Camera ferma, hold | Nota finale tenuta |
-| 00:14.70 | Effetti a zero | Coda del riverbero |
-| 00:15.00 | Fine | Silenzio |
+| 00:00.00 | Inizio, buio | Room tone quasi impercettibile in fade-in |
+| 00:00.25 | Nascita del punto | Sub bloom morbido + bagliore tonale (Re–La) |
+| 00:00.49 / 01.44 | Pulsazione del punto | Battiti sub (accennato / pieno) |
+| 00:02.00 | Draw-on orizzontale + flare | Doppio whoosh che si apre in stereo con l'easing |
+| 00:02.12 | Draw-on verticale | Whoosh centrale più scuro |
+| 00:02.00–04.40 | Lens flare (picco 2,7–3,5 s) | Tono cristallino + aria che scorrono da sinistra a destra |
+| 00:04.00 / 04.11 / 04.22 / 04.33 | Ingresso delle 4 staffe | 4 tick di precisione ascendenti (TL, TR, BR, BL) + aria; accordo Si♭maj7 |
+| 00:05.25 | Staffe assestate | Lock morbido |
+| 00:05.00–09.00 | Simbolo e bokeh | Ostinato a semiminime |
+| 00:07.00 / 07.12 / 07.24 | Costruzione del "3" | 3 impatti intonati in crescendo (Sol–Si♭–Re); accordo Solm9 |
+| 00:09.50 | Camera ferma su "3D", divisore | Zip verticale + sub; accordo La7sus4, parte il riser; ostinato in crome |
+| 00:10.05–10.68 | "3D Target" lettera per lettera | Arpeggio di vetro, 1 nota per lettera, panoramica sinistra → destra |
+| 00:10.75–11.97 | Bianco → arancione, bagliore | Swell caldo, filtro che si apre, reverse cymbal da 11,0 s |
+| 00:11.93–12.00 | — | 70 ms di vuoto (il riser si taglia) |
+| 00:12.00 | **Match-cut chiaro** | **Hit: sub + impatto + accordo di piano Re maggiore add9, reverse swell in entrata** |
+| 00:12.00–12.80 | Schermo chiaro | Aria luminosa e armonici alti |
+| 00:12.46–12.90 | Ritorno al fondo scuro | Respiro discendente |
+| 00:12.72–13.62 | Light sweep | Glint che attraversa lo stereo con la banda di luce |
+| 00:13.50 | Camera ferma, hold | Accordo finale tenuto |
+| 00:13.90–15.00 | Effetti a zero (14,7 s), fine | Dissolvenza fino al silenzio esatto a 15,0 s |
