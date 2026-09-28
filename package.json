@@ -1,0 +1,20 @@
+{
+  "name": "3dtarget-logo-reveal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Animazione di presentazione del logo 3D Target (15 s) con render frame-by-frame in MP4 H.264.",
+  "type": "module",
+  "scripts": {
+    "render": "node render/render.mjs",
+    "render:h": "node render/render.mjs --format h",
+    "render:v": "node render/render.mjs --format v",
+    "still": "node render/render.mjs --still --format h",
+    "verify": "node render/verify.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.56.1"
+  },
+  "optionalDependencies": {
+    "ffmpeg-static": "^5.2.0"
+  }
+}
